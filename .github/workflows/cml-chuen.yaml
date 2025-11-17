@@ -1,0 +1,42 @@
+name: churn-imbalanced-dataset
+[cite_start]on: [push] # Déclenche le pipeline à chaque 'git push' [cite: 161, 162]
+
+[cite_start]permissions: write-all # Permet à CML de poster des commentaires [cite: 163, 164]
+
+jobs:
+  run:
+    [cite_start]runs-on: ubuntu-latest # Utilise un runner Ubuntu [cite: 166, 167]
+    steps:
+      - [cite_start]uses: actions/checkout@v3 # Récupère le code [cite: 169, 170]
+
+      # Installation de CML (via Node.js) [cite: 171, 172, 174]
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+      - uses: iterative/setup-cml@v1
+
+      # Préparation de l'environnement Python [cite: 175, 176]
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # Étape 7.3 : Installation des dépendances et Entraînement ⬇️
+      - name: Train model & produce metrics
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt # Installe les libs nécessaires [cite: 178, 183]
+          python script.py # Exécute l'entraînement, crée metrics.txt et conf_matrix.png [cite: 185, 193]
+
+      # Étape 7.4 : Génération du Rapport CML ⬇️
+      - name: Generate Report
+        env:
+          [cite_start]REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Jeton fourni automatiquement [cite: 204, 205]
+        run: |
+          # Crée le fichier Markdown du rapport
+          echo "## Metrics" > report.md
+          awk 'NR%4{print " "$0}{print ""}' metrics.txt >> report.md # Ajoute metrics.txt formaté [cite: 153, 155, 199]
+          echo "## Confusion Matrix" >> report.md
+          echo "![](./conf_matrix.png)" >> report.md # Ajoute l'image [cite: 156, 157, 201]
+
+          # Publie le rapport en commentaire GitHub [cite: 158, 202]
+          cml comment create report.md
